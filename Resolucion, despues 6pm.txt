@@ -1,0 +1,134 @@
+--PREGUNTA 1:
+SELECT E.first_name, E.last_name, E.hire_date, E.salary, D.department_name , J.job_title
+FROM EMPLOYEES E, DEPARTMENTS D, JOBS J
+WHERE E.department_id = D.department_id 
+AND E.job_id = J.job_id AND E.salary >= 4500 AND E.salary <15000;
+
+--PREGUNTA 2:
+SELECT E.employee_id, E.first_name, E.last_name, C.country_name
+FROM EMPLOYEES E, JOBS J, DEPARTMENTS D, LOCATIONS L, COUNTRIES C
+WHERE E.job_id = J.job_id
+AND E.department_id = D.department_id AND D.location_id = L.location_id 
+AND L.country_id = C.country_id AND J.job_title = 'Accountant';
+
+--PREGUNTA 3:
+SELECT * FROM EMPLOYEES E
+LEFT JOIN DEPARTMENTS D ON E.department_id = D.department_id
+LEFT JOIN LOCATIONS L ON D.location_id = L.location_id
+LEFT JOIN COUNTRIES C ON L.country_id = C.country_id
+WHERE L.city = 'Mexico City' OR C.country_name = 'United States of America';
+
+--PREGUNTA 4:
+SELECT * FROM EMPLOYEES E
+LEFT JOIN JOBS J ON E.job_id = J.job_id
+LEFT JOIN DEPARTMENTS D ON E.department_id = D.department_id
+LEFT JOIN LOCATIONS L ON D.location_id = L.location_id
+LEFT JOIN COUNTRIES C ON L.country_id = C.country_id
+WHERE J.job_title = 'Sales Manager' OR J.job_title = 'Sales Representative' AND C.country_name = 'United Kingdom';
+
+--PREGUNTA 5:
+SELECT E.first_name, E.last_name FROM EMPLOYEES E
+LEFT JOIN JOBS J ON E.job_id = J.job_id
+LEFT JOIN DEPARTMENTS D ON E.department_id = D.department_id
+LEFT JOIN LOCATIONS L ON D.location_id = L.location_id
+LEFT JOIN COUNTRIES C ON L.country_id = C.country_id
+LEFT JOIN REGIONS R ON C.region_id = R.region_id
+WHERE R.region_name = 'Americas' AND E.salary < (J.min_salary + J.max_salary)/2;
+
+--PREGUNTA 6
+SELECT R.region_id, R.region_name, C.country_id, C.country_name, COUNT(E.employee_id)
+FROM EMPLOYEES E, DEPARTMENTS D, LOCATIONS L, COUNTRIES C, REGIONS R
+WHERE E.department_id = D.department_id AND D.location_id = L.location_id
+AND L.country_id = C.country_id AND C.region_id = R.region_id
+AND 3 < (SELECT COUNT(EE.employee_id)
+FROM EMPLOYEES EE, DEPARTMENTS DD, LOCATIONS LL, COUNTRIES CC, REGIONS RR
+WHERE EE.department_id = DD.department_id AND DD.location_id = LL.location_id
+AND LL.country_id = CC.country_id AND CC.region_id = RR.region_id AND C.country_name = CC.country_name
+GROUP BY RR.region_id, CC.country_id)
+GROUP BY R.region_id, C.country_id
+
+--PREGUNTA 7
+SELECT MAX(E.hire_Date), MIN(E.hire_date), MAX(E.hire_Date) - MIN(E.hire_date) diferencia_dias 
+FROM EMPLOYEES E, DEPARTMENTS D
+WHERE E.department_id = D.department_id AND D.department_name <> 'Executive'
+
+--PREGUNTA 8
+SELECT M.employee_id, M.first_name, M.last_name, COUNT(*)
+FROM EMPLOYEES E ,EMPLOYEES M
+WHERE M.employee_id = E.manager_id AND (SELECT COUNT(*)
+FROM EMPLOYEES EE ,EMPLOYEES MM
+WHERE MM.employee_id = EE.manager_id AND MM.employee_id = M.employee_id
+GROUP BY MM.employee_id, MM.first_name, MM.last_name) < 8 
+GROUP BY M.employee_id, M.first_name, M.last_name
+
+--PREGUNTA 9
+SELECT 'EL EMPLEADO ' || E.first_name || ' ' || E.last_name || ' HA TRABAJADO POR ' ||
+      EXTRACT(YEAR FROM MAX(E.hire_Date)) - EXTRACT(YEAR FROM MIN(E.hire_Date)) || ' ANIOS '  ||
+	  EXTRACT(MONTH FROM MAX(E.hire_Date)) - EXTRACT(MONTH FROM MIN(E.hire_Date)) || ' MESES ' || 
+      MAX(E.hire_Date) - MIN(E.hire_date) || ' DIAS ' 
+FROM EMPLOYEES E, DEPARTMENTS D, LOCATIONS L, COUNTRIES C, REGIONS R
+WHERE E.department_id = D.department_id AND D.location_id = L.location_id
+AND L.country_id = C.country_id AND C.region_id = R.region_id AND R.region_name = 'Europe'
+AND EXTRACT(YEAR FROM E.hire_date) >1997
+GROUP BY E.first_name, E.last_name
+
+--PREGUNTA 10
+SELECT E.employee_id, E.first_name, E.last_name, J.job_title , JH.start_date, JH.end_date
+FROM EMPLOYEES E, JOBS J, JOB_HISTORY JH
+WHERE E.job_id = J.job_id AND JH.job_id = J.job_id
+
+--PREGUNTA 11
+
+CREATE TABLE emp001(
+	emp_id VARCHAR(8),
+	first_name VARCHAR(20),
+	last_name VARCHAR(25) NOT NULL,
+	email VARCHAR(25) NOT NULL,
+	phone_number VARCHAR(20),
+	hire_date DATE NOT NULL,
+	job_id VARCHAR(10) NOT NULL REFERENCES JOBS, 
+	salary NUMERIC(8,2), 
+	commission_pct NUMERIC(2,2), 
+	manager_first_name VARCHAR(20) ,
+	manager_last_name VARCHAR(25) ,
+	department_name VARCHAR(30) NOT NULL, 
+	PRIMARY KEY (manager_first_name,manager_last_name,department_name),
+	CONSTRAINT emp_salary_min
+   CHECK (salary > 0) 
+   ) ;
+   
+DROP TABLE emp001 
+ 
+SELECT commission_pct, CASE WHEN (commission_pct IS NULL) THEN 0 ELSE commission_pct END FROM EMPLOYEES
+
+
+INSERT INTO emp001 
+SELECT LPAD(CAST(E.employee_id AS VARCHAR),8,'0'), UPPER(E.first_name), 
+UPPER(E.last_name), E.email, E.phone_number, E.hire_date, E.job_id, E.salary, 
+CASE WHEN (E.commission_pct IS NULL) THEN 0 ELSE E.commission_pct END, 
+E.first_name manager_first_name, E.last_name manager_last_name, D.department_name 
+FROM EMPLOYEES E,DEPARTMENTS D
+WHERE E.department_id = D.department_id 
+AND E.manager_id = D.manager_id 
+AND E.salary > (SELECT TRUNC(AVG(SALARY),2) FROM EMPLOYEES)
+
+SELECT * FROM emp001
+
+--PREGUNTA 11
+UPDATE emp001 SET salary = salary*1.1 WHERE salary 
+
+SELECT E.emp_id, E.first_name, E.last_name FROM emp001 E WHERE salary < (SELECT 
+									TRUNC(AVG(salary),2) 
+								  FROM emp001 GROUP BY department_name)
+
+SELECT TRUNC(AVG(salary),2) FROM emp001 GROUP BY department_name
+
+--PREGUNTA 12
+ALTER TABLE emp001 ADD COLUMN COMMISSION NUMERIC(8,2);
+ALTER TABLE emp001 ADD COLUMN TOTAL_SALARY NUMERIC(8,2);
+
+
+UPDATE emp001 SET COMMISSION = commission_pct*salary;
+UPDATE emp001 SET TOTAL_SALARY = salary + COMMISSION;
+
+SELECT * FROM emp001;
